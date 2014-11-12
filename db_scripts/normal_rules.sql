@@ -125,5 +125,66 @@ and length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1
 			
 				limit 5000;
 
+select subject_id, chrom, pos, ref, split_part(alt, ',', 1) as allele1, 
+				split_part(alt, ',', 2) as allele2, 
+				split_part(file, ':', 1) as GT 
+				from gene.illumina_vcf where pos = 54720 and  alt like '%,%' 
+				and length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1 
+				order by  2, 3, 5, 6, 7  limit 1300;
+
+select * from gene.illumina_vcf where  alt like '%,%' 
+				and length(split_part(alt,',', 1)) 1 or length(split_part(alt,',', 2)) > 1 
+order by chrom, pos, alt
+limit 100  
+ 
+
+select chrom, pos, ref, alt, split_part(file, ':', 1) as GT, subject_id, vartype 
+				from gene.illumina_vcf where 
+				alt not like '%,%' or (alt like '%,%' and length(split_part(alt,',', 1)) = 1 
+				and length(split_part(alt,',', 2)) = 1) 
+				order by 1, 2, 4, 7   limit 250;
+
+select chrom, pos, ref, alt, split_part(file, ':', 1) as GT, subject_id, vartype 
+				from gene.illumina_vcf where chrom = 'chr1'  
+                and 
+				alt not like '%,%' or (alt like '%,%' and length(split_part(alt,',', 1)) = 1 
+				and length(split_part(alt,',', 2)) = 1)  order by 1, 2, 4 limit 2500
+
+drop table gene.vcf_tmp;
+
+create temporary table gene.vcf_tmp (
+chrom   varchar2,
+pos     integer,
+ref     varchar2,
+alt     varchar2,
+allele1 varchar2,
+allele2 varchar2,
+org_genotype    varchar2,
+vartype    varchar2,
+mod_pos integer,
+mod_ref varchar2,
+mod_allele1 varchar2,
+mod_allele2 varchar2,
+allele_list varchar2,
+new_gt  varchar2);
+
+
+
+select subject_id, chrom, pos, ref, split_part(alt, ',', 1) as allele1, 
+				split_part(alt, ',', 2) as allele2, 
+				split_part(file, ':', 1) as GT, alt 
+				from gene.illumina_vcf where chrom = 'chr1'  and (alt like '%,%' 
+				and length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1) 
+				order by  2, 3, 5, 6, 7  limit 500;
+
+select count(*)
+				from gene.illumina_vcf where  alt like '%,%' 
+				and length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1
+
+select 1202256/769837125   
+
+				
+
+
 
 
