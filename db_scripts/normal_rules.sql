@@ -159,7 +159,7 @@ ref     varchar2,
 alt     varchar2,
 allele1 varchar2,
 allele2 varchar2,
-org_genotype    varchar2,
+org_gt    varchar2,
 vartype    varchar2,
 mod_pos integer,
 mod_ref varchar2,
@@ -167,6 +167,8 @@ mod_allele1 varchar2,
 mod_allele2 varchar2,
 allele_list varchar2,
 new_gt  varchar2);
+
+select * from gene.vcf_tmp
 
 
 
@@ -181,10 +183,30 @@ select count(*)
 				from gene.illumina_vcf where  alt like '%,%' 
 				and length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1
 
-select 1202256/769837125   
+select 1202256/769837125 
+
+select subject_id, chrom, pos, ref, split_part(alt, ',', 1) as allele1, 
+				 split_part(alt, ',', 2) as allele2, 
+				 split_part(file, ':', 1) as GT, alt 
+				 from gene.illumina_vcf where chrom = 'chr1' and (alt like '%,%' 
+				 and length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1) 
+				 order by  2, 3, 5, 6, 7 offset 0 limit 5000; 
+
+select chrom, pos, ref, alt, split_part(file, ':', 1) as GT, subject_id, vartype 
+				 from gene.illumina_vcf where chrom = 'chr1' and 
+				 alt not like '%,%' or (alt like '%,%' and length(split_part(alt,',', 1)) = 1 
+				 and length(split_part(alt,',', 2)) = 1) 
+				 order by 1, 2, 4, 7 offset 0 limit 5000; 
+
+insert into gene.vcf_tmp values(chrom, pos, ref, alt, allele1, allele2, org_gt, vartype, mod_pos, mod_ref, mod_allele1, mod_allele2, allele_list, new_gt (chr1,54001,A,G,G,G,1|0,snp,54000,A,G,A,[G],1|0);
+
+insert into gene.vcf_tmp (chrom, pos, ref, alt, allele1, allele2, org_gt, vartype, mod_pos, mod_ref, mod_allele1, mod_allele2, allele_list, new_gt) values ('chr1','54001','A','G','A','G','0/1','snp','54000','A','A','G','[G]','0/1')
+
+
 
 				
 
 
+insert into gene.vcf_tmp (chrom, pos, ref, alt, allele1, allele2, org_gt, vartype, mod_pos, mod_ref, mod_allele1, mod_allele2, allele_list, new_gt) values ('chr1','10108','C','CCT','C','CCT','0/1','ins','10109','-','-','CT','[CT]','0/1');
 
-
+select * from gene.vcf_tmp

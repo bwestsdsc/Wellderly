@@ -1,25 +1,36 @@
 package edu.sdsc.wellderly.rules;
 
 import java.sql.Connection;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+
+import org.apache.commons.collections4.comparators.ComparatorChain;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import edu.sdsc.dao.WellConn;
+import edu.sdsc.wellderly.rules.ChromComparator;
+import edu.sdsc.wellderly.rules.PosComparator;
+import edu.sdsc.wellderly.rules.AltComparator;
 
 public class AlGtSimpleRules {
 
 	static final Set<String> alts1 = new HashSet<String>();
-	static ArrayList<Object> mergedList = new ArrayList<Object>();
-	static ArrayList<Object> recordList = new ArrayList<Object>();
+	static Collection<Object> mergedList = new CopyOnWriteArrayList<Object>();
+	static CopyOnWriteArrayList<Object> recordList = new CopyOnWriteArrayList<Object>();
 	static ArrayList<Object> groupList = new ArrayList<Object>();
+	static final Set<String> alts = new HashSet<String>();
+	static final Set<String> refs = new HashSet<String>();
 
 	public AlGtSimpleRules() {
 	}
@@ -32,141 +43,15 @@ public class AlGtSimpleRules {
 			AlGtComplexRules vcfComp = new AlGtComplexRules();
 			mergedList = vcfComp.getComplexData();
 			mergedList.addAll(recordList);
-			createMergedList(mergedList);
+			sortRecords((CopyOnWriteArrayList<Object>) mergedList);
+			createAlleleList((CopyOnWriteArrayList<Object>) mergedList);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	private static void createMergedList(ArrayList<Object> mergedList2) throws IOException, SQLException {
-
-		String output = null;
-		
-		Connection conn = null;
-		
-		try {
-			conn = WellConn.getConn();
-		} catch (Exception e) {
-			System.out.println(e.toString());
-
-		}
-		
-		try {
-			
-			for (Object mrgRecord : mergedList) {
-				String chrom = ((VCFData) mrgRecord).getChrom();
-				int pos = ((VCFData) mrgRecord).getPos();
-				String ref = ((VCFData) mrgRecord).getRef();
-				String alt = ((VCFData) mrgRecord).getAlt();
-				String allele1 = ((VCFData) mrgRecord).getAllele1();
-				String allele2 = ((VCFData) mrgRecord).getAllele2();
-				String genotype = ((VCFData) mrgRecord).getGenotype();
-				String modRef1 = ((VCFData) mrgRecord).getModRef1();
-				String modRef2 = ((VCFData) mrgRecord).getModRef2();
-				String modAlt1 = ((VCFData) mrgRecord).getModAlt1();
-				String modAlt2 = ((VCFData) mrgRecord).getModAlt2();
-				String modAltList1 = ((VCFData) mrgRecord).getAltList1();
-				String modAltList2 = ((VCFData) mrgRecord).getAltList2();
-				String modGT1 = ((VCFData) mrgRecord).getModGT1();
-				String modGT2 = ((VCFData) mrgRecord).getModGT2();
-				String vartype1 = ((VCFData) mrgRecord).getVartype1();
-				String vartype2 = ((VCFData) mrgRecord).getVartype2();
-				String type = ((VCFData) mrgRecord).getType();
-				int modPos1 = ((VCFData) mrgRecord).getModStartPos1();
-				int modPos2 = ((VCFData) mrgRecord).getModStartPos2();
-
-				String alleleList1 = null;
-				String alleleList2 = null;
-				if (vartype1.equalsIgnoreCase("del")) {
-					alleleList1 = modAltList2;
-				} else {
-					alleleList1 = modAltList1;
-				}
-				if (vartype2 != null){
-					if (vartype2.equals("del")) {
-						alleleList2 = modAltList2;
-					} else {
-						alleleList2 = modAltList1;
-					}
-				}
-
-				
-				if (type.equals("s")) {
-					if (vartype1.equals("del")) {
-						output = "insert into gene.vcf_tmp (chrom, pos, ref, "
-								+ "alt, allele1, allele2, org_gt, vartype, mod_pos, "
-								+ "mod_ref, mod_allele1, mod_allele2, allele_list, new_gt) values "
-								+ "('" + chrom + "','"  + pos + "','" + ref + "','" + alt + "','"
-								+ allele1 + "','" + allele2 + "','"
-								+ genotype + "','" + vartype1 + "','" + modPos1
-								+ "','" + modRef1 + "','" + modAlt1 + "','"
-								+ modAlt2 + "','" + modAltList1 + "','" + modGT1
-								+ "')";
-					} else {
-
-						output = "insert into gene.vcf_tmp (chrom, pos, ref, "
-								+ "alt, allele1, allele2, org_gt, vartype, mod_pos, "
-								+ "mod_ref, mod_allele1, mod_allele2, allele_list, new_gt) values " 
-								+ "('" +chrom + "','" + pos + "','" + ref + "','" + alt
-								+ "','" + allele1 + "','" + allele2 + "','"
-								+ genotype + "','" + vartype1 + "','" + modPos1
-								+ "','" + modRef1 + "','" + modAlt1 + "','"
-								+ modAlt2 + "','" + modAltList1 + "','" + modGT1
-								+ "');";
-
-					}
-				} else if (type.equals("c") && modPos1 == modPos2) {
-					output = "insert into gene.vcf_tmp (chrom, pos, ref, "
-							+ "alt, allele1, allele2, org_gt, vartype, mod_pos, "
-							+ "mod_ref, mod_allele1, mod_allele2, allele_list, new_gt) values "
-							+ "('" + chrom + "','" + pos + "','" + ref + "','" + alt
-							+ "','" + allele1 + "','" + allele2 + "','" + genotype
-							+ "','" + vartype1 + "','" + modPos1 + "','" + modRef1
-							+ "','" + modAlt1 + "','" + modAlt2 + "','"
-							+ alleleList1 + "','" + modGT1 + "');";
-
-				} else if (type.equals("c") && modPos1 != modPos2) {
-					output = "insert into gene.vcf_tmp (chrom, pos, ref, "
-							+ "alt, allele1, allele2, org_gt, vartype, mod_pos, "
-							+ "mod_ref, mod_allele1, mod_allele2, allele_list, new_gt) values "
-							+ "('" + chrom + "','" + pos + "','" + ref + "','" + alt
-							+ "','" + allele1 + "','" + allele2 + "','" + genotype
-							+ "','" + vartype1 + "','" + modPos1 + "','" + modRef1
-							+ "','" + modAlt1 + "','" + "X" + "','" + alleleList1
-							+ "','" + modGT1 + "');";
-
-					output += "insert into gene.vcf_tmp (chrom, pos, ref, "
-							+ "alt, allele1, allele2, org_gt, vartype, mod_pos, "
-							+ "mod_ref, mod_allele1, mod_allele2, allele_list, new_gt) values "
-							+ "('" + chrom + "','" + pos + "','" + ref + "','" + alt
-							+ "','" + allele1 + "','" + allele2 + "','" + genotype
-							+ "','" + vartype2 + "','" + modPos2 + "','" + modRef2
-							+ "','" + "X" + "','" + modAlt2 + "','" + alleleList2
-							+ "','" + modGT2 + "');";
-					
-					
-				}
-				try {
-					//System.out.println(output);
-					PreparedStatement ps = conn.prepareStatement(output);
-					ps.executeQuery();
-
-				} catch (Exception e) {
-					System.out.println(e.toString());
-
-				}
-
-			}
-
-		} catch (Exception e) {
-			System.out.println("Merge List " + e.toString());
-			e.printStackTrace();
-		}finally{
-			conn.close();
-		}
-	}
-
+	
 	public static void getData() throws Exception {
 
 		Connection conn = null;
@@ -181,10 +66,10 @@ public class AlGtSimpleRules {
 		// ignore offset and limit. For testing only. They will be removed when
 		// in production.
 		String query = "select chrom, pos, ref, alt, split_part(file, ':', 1) as GT, subject_id, vartype "
-				+ "from gene.illumina_vcf where chrom = 'chr1' and "
+				+ "from gene.illumina_vcf where "
 				+ "alt not like '%,%' or (alt like '%,%' and length(split_part(alt,',', 1)) = 1 "
 				+ "and length(split_part(alt,',', 2)) = 1) "
-				+ "order by 1, 2, 4, 7 offset 0 limit 5";
+				+ "order by 1, 2, 4, 7";
 
 		try {
 			PreparedStatement ps = conn.prepareStatement(query);
@@ -219,6 +104,7 @@ public class AlGtSimpleRules {
 				vcf.setChrom(chrom);
 				vcfGrp.setChrom(chrom);
 				vcf.setPos(pos);
+				vcf.setOrgPos(pos);
 				vcfGrp.setPos(pos);
 				vcf.setRef(ref);
 				vcf.setAlt(alt);
@@ -268,24 +154,11 @@ public class AlGtSimpleRules {
 				String modRef = ((VCFData) record).getModRef1();
 				String gt1 = ((VCFData) record).getGenotype();
 				String vartype = ((VCFData) record).getVartype1();
-				sortAlleleList((VCFData) record);
+				sortAlleleList(record);
 				String modAltList = ((VCFData) record).getAltList1();
 				String modGT = createGenotype(gt1, modRef, modAlt1, modAlt2,
 						modAltList, vartype);
 				((VCFData) record).setModGT1(modGT);
-
-				/*
-				 * // this will eventually be loaded into a delimited file and
-				 * bulk // loaded to the db. For now just print to standard out
-				 */
-				/*
-				 * System.out.println(subjID + "\t" + chrom + "\t" + pos + "\t"
-				 * + ref + "\t" + alt + "\t" + allele1 + "\t" + allele2 + "\t" +
-				 * vartype + "\t" + pos + "\t" + gt1 + "\t" + modStartPos + "\t"
-				 * + modRef + "\t" + "\t" + modAlt1 + "\t" + modAlt2 + "\t" +
-				 * modAltList + "\t" + modGT);
-				 */
-
 			}
 
 		} catch (Exception e) {
@@ -329,9 +202,12 @@ public class AlGtSimpleRules {
 				((VCFData) vcf).setAllele2(alts[1]);
 			}
 		} else {
-			((VCFData) vcf).setAllele2(alt);
+			if (gts[2].equals("0")) {
+				((VCFData) vcf).setAllele2(ref);
+			} else {
+				((VCFData) vcf).setAllele2(alt);
+			}
 		}
-
 	}
 
 	// Recompute the genotype using the distinct bases list and each allele
@@ -443,9 +319,8 @@ public class AlGtSimpleRules {
 					// is this a snp
 					if (ref.length() == 1 && vars[0].length() == 1) {
 						varType = "snp";
-					}
 
-					else if (ref.length() == 0 && vars[0].length() > 0) {
+					} else if (ref.length() == 0 && vars[0].length() > 0) {
 						begin1 = begin1 + 1;
 						varType = "ins";
 						ref = "-";
@@ -478,8 +353,12 @@ public class AlGtSimpleRules {
 				if (varType.equals("del")) {
 					alts1.add(ref);
 				} else {
-					alts1.add(vars[0]);
-					alts1.add(vars[1]);
+					if (!vars[0].equals(ref)) {
+						alts1.add(vars[0]);
+					}
+					if (!vars[1].equals(ref)) {
+						alts1.add(vars[1]);
+					}
 				}
 			} else {
 				for (int i = 0; i < Math.min(var.length(), ref.length()); i++) {
@@ -537,7 +416,9 @@ public class AlGtSimpleRules {
 				if (varType.equals("del")) {
 					alts1.add(ref);
 				} else {
-					alts1.add(var);
+					if (!var.equals(ref)) {
+						alts1.add(var);
+					}
 				}
 				if (!gts[0].equals("0")) {
 					((VCFData) vcf).setModAlt1(var);
@@ -564,7 +445,8 @@ public class AlGtSimpleRules {
 		}
 	}
 
-	public static void sortAlleleList(VCFData vcf) {
+	public static void sortAlleleList(Object vcf) {
+
 		String modAltList1 = ((VCFData) vcf).getAltList1();
 		List<String> altList4 = new ArrayList<String>();
 		String altListc = modAltList1.replace("[", "");
@@ -580,4 +462,341 @@ public class AlGtSimpleRules {
 		((VCFData) vcf).setAltList1(altList4.toString());
 	}
 
+	public static CopyOnWriteArrayList<Object> sortRecords(
+			CopyOnWriteArrayList<Object> mergedList2) {
+
+		for (Object mrgRecord : mergedList2) {
+			// Only modify records that need to be split into two records
+			String modGT = ((VCFData) mrgRecord).getModGT2();
+			String type = ((VCFData) mrgRecord).getType();
+			// Only modify records that need to be split into two records
+			if (type == "c" && modGT.contains("X")) {
+
+				String subjID = ((VCFData) mrgRecord).getSubjectID();
+				String chrom = ((VCFData) mrgRecord).getChrom();
+				int pos = ((VCFData) mrgRecord).getPos();
+				int orgPos = ((VCFData) mrgRecord).getOrgPos();
+				String ref = ((VCFData) mrgRecord).getRef();
+				String alt = ((VCFData) mrgRecord).getAlt();
+				String gt = ((VCFData) mrgRecord).getGenotype();
+				int modPos1 = ((VCFData) mrgRecord).getModStartPos1();
+				int modPos2 = ((VCFData) mrgRecord).getModStartPos2();
+				String modRef1 = ((VCFData) mrgRecord).getModRef1();
+				String modRef2 = ((VCFData) mrgRecord).getModRef2();
+				String allele1 = ((VCFData) mrgRecord).getAllele1();
+				String allele2 = ((VCFData) mrgRecord).getAllele2();
+				String modAlt1 = ((VCFData) mrgRecord).getModAlt1();
+				String modAlt2 = ((VCFData) mrgRecord).getModAlt2();
+				String vartype1 = ((VCFData) mrgRecord).getVartype1();
+				String vartype2 = ((VCFData) mrgRecord).getVartype2();
+
+				VCFComplexGroup vcfGrp1 = new VCFComplexGroup();
+				VCFComplexGroup vcfGrp2 = new VCFComplexGroup();
+				VCFData vcf1 = new VCFData();
+				VCFData vcf2 = new VCFData();
+				if (pos != modPos1) {
+					vcfGrp1.setChrom(chrom);
+					vcfGrp1.setPos(modPos1);
+					vcf1.setPos(modPos1);
+					vcf1.setModStartPos1(modPos1);
+					vcf1.setVartype1(vartype1);
+					vcf1.setModRef1(modRef1);
+					vcf2.setPos(modPos2);
+					vcf2.setModStartPos1(modPos2);
+					vcf2.setVartype1(vartype2);
+					vcf2.setModRef1(modRef2);
+				} else {
+					vcfGrp2.setChrom(chrom);
+					vcfGrp2.setPos(modPos2);
+					vcf1.setPos(modPos2);
+					vcf1.setModStartPos1(modPos2);
+					vcf1.setVartype1(vartype2);
+					vcf1.setModRef1(modRef2);
+					vcf2.setPos(modPos1);
+					vcf2.setModStartPos1(modPos1);
+					vcf2.setVartype1(vartype1);
+					vcf2.setModRef1(modRef1);
+				}
+
+				if (!vartype1.equals(vartype2)) {
+					if (!vartype1.equalsIgnoreCase("del")) {
+						vcf1.setModAlt1(modAlt1);
+						vcf1.setModAlt2("X");
+						vcf2.setModAlt1("X");
+						vcf2.setModAlt2(modAlt2);
+					} else {
+						vcf2.setModAlt1(modAlt1);
+						vcf2.setModAlt2("X");
+						vcf1.setModAlt1("X");
+						vcf1.setModAlt2(modAlt2);
+					}
+				} else {
+					vcf1.setModAlt1(modAlt1);
+					vcf1.setModAlt2("X");
+					vcf2.setModAlt1("X");
+					vcf2.setModAlt2(modAlt2);
+				}
+
+				// Create a separate object records for this type
+
+				vcf1.setSubjectID(subjID);
+				vcf1.setType(type);
+				vcf1.setChrom(chrom);
+				vcf1.setRef(ref);
+				vcf1.setAlt(alt);
+				vcf1.setOrgPos(orgPos);
+				vcf1.setAllele1(allele1);
+				vcf1.setAllele2(allele2);
+				vcf1.setGenotype(gt);
+
+				groupList.add(vcfGrp1);
+				mergedList2.add(vcf1);
+
+				// Create a separate object records for this type
+
+				vcf2.setSubjectID(subjID);
+				vcf2.setType(type);
+				vcf2.setChrom(chrom);
+				vcf2.setOrgPos(orgPos);
+				vcf2.setRef(ref);
+				vcf2.setAlt(alt);
+				vcf2.setAllele1(allele1);
+				vcf2.setAllele2(allele2);
+				vcf2.setGenotype(gt);
+
+				groupList.add(vcfGrp2);
+				mergedList2.add(vcf2);
+				// remove the pre-slpit object from the list
+				mergedList2.remove(mrgRecord);
+			}
+		}
+
+		// Chain comparator takes the merged list with new objects and sorts
+		// them by chromosome/pos/alt
+		ComparatorChain<Object> chain = new ComparatorChain<Object>();
+		Comparator<Object> chromComp = new ChromComparator();
+		Comparator<Object> posComp = new PosComparator();
+		Comparator<Object> altComp = new AltComparator();
+		chain.addComparator(chromComp);
+		chain.addComparator(posComp);
+		chain.addComparator(altComp);
+
+		Collections.sort(mergedList2, chain);
+		return mergedList2;
+	}
+
+	public static void createAlleleList(CopyOnWriteArrayList<Object> mergedList) throws IOException {
+
+		int lastPos = 0;
+		ArrayList<Object> groupList1 = new ArrayList<Object>();
+		VCFComplexGroup vcfGrp = new VCFComplexGroup();
+
+		for (Object mrgRecord : mergedList) {
+			String chrom = ((VCFData) mrgRecord).getChrom();
+			int pos = ((VCFData) mrgRecord).getPos();
+			if (lastPos != 0 && lastPos != pos) {
+				vcfGrp.setAltList1(alts.toString());
+				vcfGrp.setAltList2(refs.toString());
+				groupList1.add(vcfGrp);
+				alts.clear();
+				refs.clear();
+				vcfGrp = new VCFComplexGroup();
+			}
+			vcfGrp.setChrom(chrom);
+			vcfGrp.setPos(pos);
+
+			String ref1 = ((VCFData) mrgRecord).getModRef1();
+			String ref2 = ((VCFData) mrgRecord).getModRef2();
+			String var1 = ((VCFData) mrgRecord).getModAlt1();
+			String var2 = ((VCFData) mrgRecord).getModAlt2();
+
+			if (ref1 != null && !ref1.equals("-") && !ref1.equals("")
+					&& !ref1.equalsIgnoreCase("X")) {
+				refs.add(ref1);
+			}
+			if (ref2 != null && !ref2.equals("-") && !ref2.equals("")
+					&& !ref2.equalsIgnoreCase("X")) {
+				refs.add(ref2);
+			}
+			if (var1 != null && !var1.equals("-") && !var1.equals("")
+					&& !var1.equalsIgnoreCase("X")) {
+				if (!var1.equals(ref1)) {
+					alts.add(var1);
+				}
+			}
+			if (var2 != null && !var2.equals("-") && !var2.equals("")
+					&& !var2.equalsIgnoreCase("X")) {
+				if (!var2.equals(ref2) && !var2.equals(ref1)) {
+					alts.add(var2);
+				}
+			}
+
+			lastPos = pos;
+
+		}
+		vcfGrp.setAltList1(alts.toString());
+		vcfGrp.setAltList2(refs.toString());
+		groupList1.add(vcfGrp);
+		alts.clear();
+		refs.clear();
+
+		try {
+			for (Object group : groupList1) {
+
+				String chrom1 = ((VCFComplexGroup) group).getChrom();
+				String chrom2 = "";
+				int pos1 = ((VCFComplexGroup) group).getPos();
+				int pos2 = 0;
+
+				for (Object record : mergedList) {
+
+					chrom2 = ((VCFData) record).getChrom();
+					pos2 = ((VCFData) record).getPos();
+					String altList = ((VCFComplexGroup) group).getAltList1();
+					String refList = ((VCFComplexGroup) group).getAltList2();
+
+					if (chrom1.equals(chrom2) && pos1 == pos2) {
+						((VCFData) record).setAltList1(altList);
+						((VCFData) record).setAltList2(refList);
+					}
+				}
+			}
+
+		} catch (Exception e) {
+			System.out.println("Grouping " + e.toString());
+		}
+		
+		FileWriter fw = new FileWriter("merged_output.txt");
+
+		String output = null;
+		for (Object mrgRecord : mergedList) {
+			String subjID = ((VCFData) mrgRecord).getSubjectID();
+			String chrom = ((VCFData) mrgRecord).getChrom();
+			int pos = ((VCFData) mrgRecord).getOrgPos();
+			String ref = ((VCFData) mrgRecord).getRef();
+			String alt = ((VCFData) mrgRecord).getAlt();
+			String allele1 = ((VCFData) mrgRecord).getAllele1();
+			String allele2 = ((VCFData) mrgRecord).getAllele2();
+			String vartype1 = ((VCFData) mrgRecord).getVartype1();
+			String vartype2 = ((VCFData) mrgRecord).getVartype2();
+			String genotype = ((VCFData) mrgRecord).getGenotype();
+			int modPos1 = ((VCFData) mrgRecord).getModStartPos1();
+			int modPos2 = ((VCFData) mrgRecord).getModStartPos2();
+			String modRef1 = ((VCFData) mrgRecord).getModRef1();
+			String modRef2 = ((VCFData) mrgRecord).getModRef2();
+			String modAlt1 = ((VCFData) mrgRecord).getModAlt1();
+			String modAlt2 = ((VCFData) mrgRecord).getModAlt2();
+			String modAltList1 = ((VCFData) mrgRecord).getAltList1();
+			String modAltList2 = ((VCFData) mrgRecord).getAltList2();
+			String type = ((VCFData) mrgRecord).getType();
+
+			List<String> altList3 = new ArrayList<String>();
+			String altLista = modAltList1.replace("[", "");
+			String altListb = altLista.replace("]", "");
+
+			for (String alt1 : altListb.split(",")) {
+				altList3.add(alt1.trim());
+			}
+
+			List<String> altList4 = new ArrayList<String>();
+			String altListc = modAltList2.replace("[", "");
+			String altListd = altListc.replace("]", "");
+
+			for (String alt1 : altListd.split(",")) {
+				altList4.add(alt1.trim());
+			}
+
+			Collections.sort(altList3, new LengthFirstComparator());
+			Collections.sort(altList4, new LengthFirstComparator());
+			String altList;
+
+			if (vartype1.equals("del")) {
+				altList = altList4.toString();
+			} else {
+				altList = altList3.toString();
+			}
+			if (type.equals("s")) {
+				String newGT = createGenotype(genotype, modRef1, modAlt1,
+						modAlt2, altList, vartype1);
+
+				if (vartype1.equals("del")) {
+					output = subjID + "\t" + chrom + "\t" + pos + "\t" + ref
+							+ "\t" + alt + "\t" + allele1 + "\t" + allele2
+							+ "\t" + genotype + "\t" + vartype1 + "\t"
+							+ modPos1 + "\t" + modRef1 + "\t" + modAlt1 + "\t"
+							+ modAlt2 + "\t" + altList4 + "\t" + newGT + "\n";
+
+				} else if (!vartype1.equalsIgnoreCase("del")) {
+					output = subjID + "\t" + chrom + "\t" + pos + "\t" + ref
+							+ "\t" + alt + "\t" + allele1 + "\t" + allele2
+							+ "\t" + genotype + "\t" + vartype1 + "\t"
+							+ modPos1 + "\t" + modRef1 + "\t" + modAlt1 + "\t"
+							+ modAlt2 + "\t" + altList3 + "\t" + newGT + "\n";
+
+				} else if (vartype2 != null && output == null) {
+					if (vartype2.equals("del")) {
+						output = subjID + "\t" + chrom + "\t" + pos + "\t"
+								+ ref + "\t" + alt + "\t" + allele1 + "\t"
+								+ allele2 + "\t" + genotype + "\t" + vartype1
+								+ "\t" + modPos2 + "\t" + modRef1 + "\t"
+								+ modAlt1 + "\t" + modAlt2 + "\t" + altList3
+								+ "\t" + newGT + "\n";
+
+					} else if (!vartype2.equalsIgnoreCase("del")) {
+						output = subjID + "\t" + chrom + "\t" + pos + "\t"
+								+ ref + "\t" + alt + "\t" + allele1 + "\t"
+								+ allele2 + "\t" + genotype + "\t" + vartype1
+								+ "\t" + modPos2 + "\t" + modRef1 + "\t"
+								+ modAlt1 + "\t" + modAlt2 + "\t" + altList4
+								+ "\t" + newGT + "\n";
+					}
+				}
+
+			} else if (type.contains("c")) {
+				String[] gts = AlGtComplexRules.createGenotype(genotype,
+						modRef1, modRef2, modAlt1, modAlt2, altList3, vartype1,
+						altList4, vartype2, modPos1, modPos2);
+
+				if (vartype1.equals("del")) {
+					output = subjID + "\t" + chrom + "\t" + pos + "\t" + ref
+							+ "\t" + alt + "\t" + allele1 + "\t" + allele2
+							+ "\t" + genotype + "\t" + vartype1 + "\t"
+							+ modPos1 + "\t" + modRef1 + "\t" + modAlt1 + "\t"
+							+ modAlt2 + "\t" + altList4 + "\t" + gts[0] + "\n";
+
+				} else if (!vartype1.equalsIgnoreCase("del")) {
+					output = subjID + "\t" + chrom + "\t" + pos + "\t" + ref
+							+ "\t" + alt + "\t" + allele1 + "\t" + allele2
+							+ "\t" + genotype + "\t" + vartype1 + "\t"
+							+ modPos1 + "\t" + modRef1 + "\t" + modAlt1 + "\t"
+							+ modAlt2 + "\t" + altList3 + "\t" + gts[0] + "\n";
+
+				} else if (vartype2 != null && output == null) {
+					if (vartype2.equals("del")) {
+						output = subjID + "\t" + chrom + "\t" + pos + "\t"
+								+ ref + "\t" + alt + "\t" + allele1 + "\t"
+								+ allele2 + "\t" + genotype + "\t" + vartype1
+								+ "\t" + modPos2 + "\t" + modRef1 + "\t"
+								+ modAlt1 + "\t" + modAlt2 + "\t" + altList3
+								+ "\t" + gts[1] + "\n";
+
+					} else if (!vartype2.equalsIgnoreCase("del")) {
+						output = subjID + "\t" + chrom + "\t" + pos + "\t"
+								+ ref + "\t" + alt + "\t" + allele1 + "\t"
+								+ allele2 + "\t" + genotype + "\t" + vartype1
+								+ "\t" + modPos2 + "\t" + modRef1 + "\t"
+								+ modAlt1 + "\t" + modAlt2 + "\t" + altList4
+								+ "\t" + gts[1] + "\n";
+					}
+				}
+			}
+			try {
+				fw.write(output);
+			
+			} catch (IOException e) {
+				System.out.println(e.toString());
+			}
+		}
+		fw.close();
+	}
 }

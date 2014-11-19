@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import edu.sdsc.dao.WellConn;
 
@@ -15,14 +16,14 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 
 	static final Set<String> alts = new HashSet<String>();
 	static final Set<String> refs = new HashSet<String>();
-	static ArrayList<Object> recordList = new ArrayList<Object>();
+	static CopyOnWriteArrayList<Object> recordList = new CopyOnWriteArrayList<Object>();
 	static ArrayList<Object> groupList = new ArrayList<Object>();
 
 	public AlGtComplexRules() {
 
 	}
 
-	public ArrayList<Object> getComplexData() throws Exception {
+	public CopyOnWriteArrayList<Object> getComplexData() throws Exception {
 
 		Connection conn = null;
 		ResultSet rs = null;
@@ -37,9 +38,9 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 		String query = "select subject_id, chrom, pos, ref, split_part(alt, ',', 1) as allele1, "
 				+ "split_part(alt, ',', 2) as allele2, "
 				+ "split_part(file, ':', 1) as GT, alt "
-				+ "from gene.illumina_vcf where chrom = 'chr1' and (alt like '%,%' "
-				+ "and length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1) "
-				+ "order by  2, 3, 5, 6, 7 offset 0 limit 5";
+				+ "from gene.illumina_vcf where alt like '%,%' "
+				+ "and (length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1) "
+				+ "order by  2, 3, 5, 6, 7";
 
 		try {
 
@@ -75,11 +76,11 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 				String alt = rs.getString(8);
 				String subjID = rs.getString(1);
 				vcf.setChrom(chrom);
-				vcfGrp.setChrom(chrom);
 				vcf.setPos(pos);
 				vcf.setAlt(alt);
 				vcfGrp.setChrom(chrom);
 				vcfGrp.setPos(pos);
+				vcf.setOrgPos(pos);
 				vcf.setRef(ref);
 				vcf.setAllele1(allele1);
 				vcf.setAllele2(allele2);
@@ -125,7 +126,8 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 				}
 
 			} catch (Exception e) {
-				System.out.println("Grouping " + e.toString());
+				System.out.println("Grouping " + e.toString()
+						+ e.getStackTrace().toString());
 			}
 
 			try {
@@ -171,27 +173,6 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 					((VCFData) record).setModGT1(gt2[0]);
 					((VCFData) record).setModGT2(gt2[1]);
 
-					/*
-					 * if (varType1.equals(varType2) && !varType1.equals("del"))
-					 * { System.out.println(subjID + "\t" + chrom + "\t" + pos +
-					 * "\t" + ref + "\t" + allele1 + "\t" + allele2 + "\t" +
-					 * varType1 + "\t" + gt + "\t" + modStartPos1 + "\t" +
-					 * modRef + "\t" + modAlt1 + "\t" + modAlt2 + "\t" +
-					 * altList3 + "\t" + gt2[0] + "\t");
-					 * 
-					 * } else { System.out.println(subjID + "\t" + chrom + "\t"
-					 * + pos + "\t" + ref + "\t" + allele1 + "\t" + allele2 +
-					 * "\t" + varType1 + "\t" + gt + "\t" + modStartPos1 + "\t"
-					 * + modRef + "\t" + modAlt1 + "\t" + modAlt2 + "\t" +
-					 * altList3 + "\t" + gt2[0] + "\t");
-					 * 
-					 * System.out.println(subjID + "\t" + chrom + "\t" + pos +
-					 * "\t" + ref + "\t" + allele1 + "\t" + allele2 + "\t" +
-					 * varType2 + "\t" + gt + "\t" + modStartPos2 + "\t" +
-					 * modRef + "\t" + modAlt1 + "\t" + modAlt2 + "\t" +
-					 * altList4 + "\t" + gt2[1] + "\t"); }
-					 */
-
 				}
 			} catch (Exception e) {
 				System.out.println("Display " + e.toString());
@@ -228,7 +209,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 
 			// set the basis for the calculation. dels have a base of ref and
 			// all others have a basis of the alts
-
+			// System.out.println(x);
 			if (modPos1 == modPos2) {
 				if (!vartype1.equals("del")) {
 					a1 = altList3.indexOf(allele1) + 1;
@@ -240,7 +221,6 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 				} else {
 					a3 = altList4.indexOf(ref2) + 1;
 				}
-
 				a2 = genoType[1];
 				genoType1 = Integer.toString(a1) + a2 + Integer.toString(a3);
 			} else {
@@ -249,13 +229,19 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 				} else {
 					a1 = altList3.indexOf(allele1) + 1;
 				}
-				if (vartype2.equals("del")) {
+				if (vartype2 != null && vartype2.equals("del")) {
 					a5 = altList4.indexOf(ref2) + 1;
 				} else {
 					a5 = altList3.indexOf(allele2) + 1;
 				}
 				a2 = genoType[1];
-				genoType1 = Integer.toString(a1) + a2 + "X";
+				int modGT = a1 != 0 ? a1 : a5;
+				if (!allele1.equals("X")) {
+					genoType1 = Integer.toString(modGT) + a2 + "X";
+				} else {
+					genoType1 = "X" + a2 + Integer.toString(modGT);
+				}
+
 				genoType2 = "X" + a2 + Integer.toString(a5);
 
 			}
@@ -342,6 +328,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 			// is this a snp
 			if (ref.length() == 1 && var1.length() == 1) {
 				varType1 = "snp";
+
 			}
 
 			else if (ref.length() == 0 && var1.length() > 0) {
@@ -365,6 +352,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 			// is this a snp
 			if (ref1.length() == 1 && var2.length() == 1) {
 				varType2 = "snp";
+
 			}
 
 			else if (ref1.length() == 0 && var2.length() > 0) {
@@ -386,7 +374,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 
 			((VCFData) vcf).setModAlt1(var1);
 			((VCFData) vcf).setModAlt2(var2);
-			
+
 			if (!ref.equals("-") && !ref.equals("") && ref != null) {
 				refs.add(ref);
 			}
@@ -394,10 +382,14 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 				refs.add(ref1);
 			}
 			if (!var1.equals("-") && !var1.equals("") && var1 != null) {
-				alts.add(var1);
+				if (!var1.equals(ref)) {
+					alts.add(var1);
+				}
 			}
 			if (!var2.equals("-") && !var2.equals("") && var2 != null) {
-				alts.add(var2);
+				if (!var2.equals(ref1)) {
+					alts.add(var2);
+				}
 			}
 
 			((VCFData) vcf).setModStartPos1(begin1);

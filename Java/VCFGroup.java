@@ -16,6 +16,7 @@ public class VCFGroup implements Serializable {
 	private String alt;
 	private String gt;
 	private String altList1;
+	private String altList2;
 	private String modAltList;
 
 	public VCFGroup() {
@@ -56,6 +57,14 @@ public class VCFGroup implements Serializable {
 
 	public String getModAltList() {
 		return modAltList;
+	}
+
+	public String getAltList2() {
+		return altList2;
+	}
+
+	public void setAltList2(String altList2) {
+		this.altList2 = altList2;
 	}
 
 	public void setModAltList(String modAltList) {

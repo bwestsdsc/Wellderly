@@ -1,6 +1,5 @@
 package edu.sdsc.wellderly.rules;
 
-
 import javax.persistence.Entity;
 import javax.persistence.Table;
 
@@ -17,18 +16,22 @@ public class VCFData {
 	private String allele1;
 	private String allele2;
 	private String altList1;
-	private String modAlt;
-	private String modRef;
-	private int modStartPos;
+	private String altList2;
+	private String refList;
+	private String modAlt1;
+	private String modAlt2;
+	private String modRef1;
+	private String modRef2;
 	private int modStartPos1;
-	private int modEndPos;
-	private int modEndPos1;
-	private String vartype;
-	private String modAltList;
-	
+	private int modStartPos2;
+	private String vartype1;
+	private String vartype2;
+	private String modGT1;
+	private String modGT2;
+	private String type;
+	private int orgPos;
 
 	public VCFData() {
-
 	}
 
 	public String getRef() {
@@ -87,56 +90,69 @@ public class VCFData {
 		this.allele2 = allele2;
 	}
 
-
 	public String getAltList1() {
 		return altList1;
 	}
-
 
 	public void setAltList1(String altList1) {
 		this.altList1 = altList1;
 	}
 
+	public String getAltList2() {
+		return altList2;
+	}
+
+	public void setAltList2(String altList2) {
+		this.altList2 = altList2;
+	}
 
 	public String getSubjectID() {
 		return subjectID;
 	}
 
-
 	public void setSubjectID(String subjectID) {
 		this.subjectID = subjectID;
 	}
 
-
-	public String getModAlt() {
-		return modAlt;
+	public String getRefList() {
+		return refList;
 	}
 
-
-	public void setModAlt(String modAlt) {
-		this.modAlt = modAlt;
+	public void setRefList(String refList) {
+		this.refList = refList;
 	}
 
-
-	public String getModRef() {
-		return modRef;
+	public String getModAlt1() {
+		return modAlt1;
 	}
 
-
-	public void setModRef(String modRef) {
-		this.modRef = modRef;
+	public void setModAlt1(String modAlt1) {
+		this.modAlt1 = modAlt1;
 	}
 
-
-	public int getModStartPos() {
-		return modStartPos;
+	public String getModAlt2() {
+		return modAlt2;
 	}
 
-
-	public void setModStartPos(int modStartPos) {
-		this.modStartPos = modStartPos;
+	public void setModAlt2(String modAlt2) {
+		this.modAlt2 = modAlt2;
 	}
 
+	public String getModRef1() {
+		return modRef1;
+	}
+
+	public void setModRef1(String modRef1) {
+		this.modRef1 = modRef1;
+	}
+
+	public String getModRef2() {
+		return modRef2;
+	}
+
+	public void setModRef2(String modRef2) {
+		this.modRef2 = modRef2;
+	}
 
 	public int getModStartPos1() {
 		return modStartPos1;
@@ -146,37 +162,60 @@ public class VCFData {
 		this.modStartPos1 = modStartPos1;
 	}
 
-	public int getModEndPos() {
-		return modEndPos;
+	public int getModStartPos2() {
+		return modStartPos2;
 	}
 
-	public void setModEndPos(int modEndPos) {
-		this.modEndPos = modEndPos;
+	public void setModStartPos2(int modStartPos2) {
+		this.modStartPos2 = modStartPos2;
 	}
 
-	public int getModEndPos1() {
-		return modEndPos1;
+	public String getVartype1() {
+		return vartype1;
 	}
 
-	public void setModEndPos1(int modEndPos1) {
-		this.modEndPos1 = modEndPos1;
+	public void setVartype1(String vartype1) {
+		this.vartype1 = vartype1;
 	}
 
-	public String getModAltList() {
-		return modAltList;
+	public String getVartype2() {
+		return vartype2;
 	}
 
-	public void setModAltList(String modAltList) {
-		this.modAltList = modAltList;
+	public void setVartype2(String vartype2) {
+		this.vartype2 = vartype2;
 	}
 
-	public String getVartype() {
-		return vartype;
+	public String getModGT1() {
+		return modGT1;
 	}
 
+	public void setModGT1(String modGT1) {
+		this.modGT1 = modGT1;
+	}
 
-	public void setVartype(String vartype) {
-		this.vartype = vartype;
+	public String getModGT2() {
+		return modGT2;
+	}
+
+	public void setModGT2(String modGT2) {
+		this.modGT2 = modGT2;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public int getOrgPos() {
+		return orgPos;
+	}
+
+	public void setOrgPos(int pos) {
+		this.orgPos = pos;
 	}
 
 }
