@@ -8,7 +8,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import edu.sdsc.dao.WellConn;
 
@@ -16,17 +15,18 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 
 	static final Set<String> alts = new HashSet<String>();
 	static final Set<String> refs = new HashSet<String>();
-	static CopyOnWriteArrayList<Object> recordList = new CopyOnWriteArrayList<Object>();
-	static ArrayList<Object> groupList = new ArrayList<Object>();
+	static List<Object> recordList = new ArrayList<Object>();
+	static List<Object> groupList = new ArrayList<Object>();
 
 	public AlGtComplexRules() {
 
 	}
 
-	public CopyOnWriteArrayList<Object> getComplexData() throws Exception {
+	public List<Object> getComplexData() throws Exception {
 
 		Connection conn = null;
 		ResultSet rs = null;
+		
 
 		try {
 			conn = WellConn.getConn();
@@ -38,13 +38,14 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 		String query = "select subject_id, chrom, pos, ref, split_part(alt, ',', 1) as allele1, "
 				+ "split_part(alt, ',', 2) as allele2, "
 				+ "split_part(file, ':', 1) as GT, alt "
-				+ "from gene.illumina_vcf where alt like '%,%' "
+				+ "from gene.illumina_vcf where chrom = 'chr22' and alt like '%,%' "
 				+ "and (length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1) "
 				+ "order by  2, 3, 5, 6, 7";
 
 		try {
 
 			PreparedStatement ps = conn.prepareStatement(query);
+			ps.setFetchSize(100000);
 			rs = ps.executeQuery();
 
 		} catch (Exception e) {
@@ -90,7 +91,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 				vcfGrp.setGt(genotype);
 				vcf.setSubjectID(subjID);
 				vcf.setType("c");
-				vcfTrim(vcf);
+				vcfTrim(vcf, vcfGrp);
 				recordList.add(vcf);
 				lastPos = pos;
 			}
@@ -254,7 +255,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 	}
 
 	// Method that trims the begin and ends of complex variations
-	public static void vcfTrim(Object vcf) {
+	public static void vcfTrim(Object vcf, Object group) {
 
 		try {
 			int end1 = 0;
@@ -393,6 +394,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 			}
 
 			((VCFData) vcf).setModStartPos1(begin1);
+			((VCFGroup) group).setPos(begin1);
 			((VCFData) vcf).setModStartPos2(begin2);
 			((VCFData) vcf).setModAlt1(var1);
 			((VCFData) vcf).setModAlt2(var2);

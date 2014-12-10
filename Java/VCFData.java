@@ -1,5 +1,7 @@
 package edu.sdsc.wellderly.rules;
 
+import java.util.ArrayList;
+
 import javax.persistence.Entity;
 import javax.persistence.Table;
 
@@ -11,6 +13,7 @@ public class VCFData {
 	private String ref;
 	private String genotype;
 	private int pos;
+	private int endPos;
 	private String chrom;
 	private String alt;
 	private String allele1;
@@ -30,6 +33,8 @@ public class VCFData {
 	private String modGT2;
 	private String type;
 	private int orgPos;
+	private String zygosity;
+	private ArrayList<String> orgAlts;
 
 	public VCFData() {
 	}
@@ -216,6 +221,30 @@ public class VCFData {
 
 	public void setOrgPos(int pos) {
 		this.orgPos = pos;
+	}
+
+	public int getEndPos() {
+		return endPos;
+	}
+
+	public void setEndPos(int endPos) {
+		this.endPos = endPos;
+	}
+
+	public String getZygosity() {
+		return zygosity;
+	}
+
+	public void setZygosity(String zygosity) {
+		this.zygosity = zygosity;
+	}
+
+	public ArrayList<String> getOrgAlts() {
+		return orgAlts;
+	}
+
+	public void setOrgAlts(ArrayList<String> orgAlts) {
+		this.orgAlts = orgAlts;
 	}
 
 }
