@@ -1,11 +1,18 @@
 package edu.sdsc.wellderly.rules;
 
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
 import javax.persistence.Table;
 
 @Entity
 @Table(name = "gene.illumina_vcf")
 public class VCFComplexData {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private long id;
 
 	private String subjectID;
 	private String ref;

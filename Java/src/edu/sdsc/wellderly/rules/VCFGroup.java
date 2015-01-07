@@ -1,25 +1,26 @@
 package edu.sdsc.wellderly.rules;
 
-import java.io.Serializable;
-
 import javax.persistence.Embeddable;
 
 @Embeddable
-public class VCFComplexGroup implements Serializable {
+public class VCFGroup {
 
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -3406974240440761472L;
+	
+
+	//private static final long serialVersionUID = -3406974240440761472L;
 	private String chrom;
 	private int pos;
-	private String alt1;
-	private String alt2;
+	private String alt;
 	private String gt;
 	private String altList1;
 	private String altList2;
+	private String modAltList;
+	private String ref;
 
-	public VCFComplexGroup() {
+	public VCFGroup() {
 
 	}
 
@@ -39,12 +40,24 @@ public class VCFComplexGroup implements Serializable {
 		this.pos = pos;
 	}
 
+	public String getAlt() {
+		return alt;
+	}
+
+	public void setAlt(String alt) {
+		this.alt = alt;
+	}
+
 	public String getAltList1() {
 		return altList1;
 	}
 
 	public void setAltList1(String altList1) {
 		this.altList1 = altList1;
+	}
+
+	public String getModAltList() {
+		return modAltList;
 	}
 
 	public String getAltList2() {
@@ -55,28 +68,24 @@ public class VCFComplexGroup implements Serializable {
 		this.altList2 = altList2;
 	}
 
+	public void setModAltList(String modAltList) {
+		this.modAltList = modAltList;
+	}
+
 	public String getGt() {
 		return gt;
 	}
 
-	public String getAlt1() {
-		return alt1;
-	}
-
-	public void setAlt1(String alt1) {
-		this.alt1 = alt1;
-	}
-
-	public String getAlt2() {
-		return alt2;
-	}
-
-	public void setAlt2(String alt2) {
-		this.alt2 = alt2;
-	}
-
 	public void setGt(String gt) {
 		this.gt = gt;
+	}
+
+	public String getRef() {
+		return ref;
+	}
+
+	public void setRef(String ref) {
+		this.ref = ref;
 	}
 
 	@Override
@@ -90,4 +99,5 @@ public class VCFComplexGroup implements Serializable {
 		return false;
 
 	}
+
 }

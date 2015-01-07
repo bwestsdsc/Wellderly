@@ -13,7 +13,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import org.apache.commons.collections4.comparators.ComparatorChain;
+
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.core.util.StatusPrinter;
 
 import java.util.HashSet;
 import java.util.List;
@@ -32,8 +37,11 @@ public class AlGtSimpleRules {
 	static List<Object> groupList = new ArrayList<Object>();
 	static final Set<String> alts = new HashSet<String>();
 	static final Set<String> refs = new HashSet<String>();
-
+	static Logger logger = LoggerFactory.getLogger(AlGtSimpleRules.class);
+	static String file = null;
+	
 	public AlGtSimpleRules() {
+		
 	}
 
 	static AlGtComplexRules vcfComp1 = null;
@@ -41,19 +49,28 @@ public class AlGtSimpleRules {
 	public static void main(String[] args) {
 		try {
 
-			getData();
-			AlGtComplexRules vcfComp = new AlGtComplexRules();
-			mergedList = vcfComp.getComplexData();
+			file = args[0];
+			String inChrom = args[1];
+			String offset = args[2];
+			String limit = args[3];
+			
+			getData(file, inChrom, offset, limit);
+			if(Integer.parseInt(offset) == 0){
+				AlGtComplexRules vcfComp = new AlGtComplexRules();
+				mergedList = vcfComp.getComplexData();
+			}
 			mergedList.addAll(recordList);
 			sortRecords((ArrayList<Object>) mergedList);
-			createAlleleList((ArrayList<Object>) mergedList);
+			createAlleleList((ArrayList<Object>) mergedList, file);
+			LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
+			StatusPrinter.print(lc);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public static void getData() throws Exception {
+	public static void getData(String file, String inChrom, String offset, String limit) throws Exception {
 
 		Connection conn = null;
 		ResultSet rs = null;
@@ -67,19 +84,22 @@ public class AlGtSimpleRules {
 		// ignore offset and limit. For testing only. They will be removed when
 		// in production.
 		String query = "select chrom, pos, ref, alt, split_part(file, ':', 1) as GT, subject_id, vartype "
-				+ "from gene.illumina_vcf where chrom = 'chr22' and "
+				+ "from gene.illumina_vcf where chrom = ? and "
 				+ "alt not like '%,%' or (alt like '%,%' and length(split_part(alt,',', 1)) = 1 "
-				+ "and length(split_part(alt,',', 2)) = 1) "
-				+ "order by 1, 2, 4, 7";
+				+ "and length(split_part(alt,',', 2)) = 1)  "
+				+ "order by 1, 2, 4, 7 offset ? limit ?";
 
 		try {
 			PreparedStatement ps = conn.prepareStatement(query);
 			ps.setFetchSize(60000000);
+			ps.setString(1, inChrom);
+			ps.setInt(2, Integer.parseInt(offset));
+			ps.setInt(3,  Integer.parseInt(limit));
+			
 			rs = ps.executeQuery();
 
 		} catch (Exception e) {
 			System.out.println(e.toString());
-
 		}
 
 		try {
@@ -117,13 +137,18 @@ public class AlGtSimpleRules {
 				vcf.setVartype1(varType);
 				vcf.setType("s");
 				createAlleles(vcf);
-				vcfTrim(vcf);
 				recordList.add(vcf);
 				lastPos = pos;
 			}
 			// last group record
 			vcfGrp.setAltList1(alts1.toString());
 			groupList.add(vcfGrp);
+			
+	
+			for(Object record: recordList){
+				vcfTrim(record);
+			}
+			
 
 			// cycle through the object to assign the distinct alts set to each
 			// record
@@ -136,7 +161,7 @@ public class AlGtSimpleRules {
 				int pos2 = 0;
 
 				for (Object record : recordList) {
-
+					
 					chrom2 = ((VCFData) record).getChrom();
 					pos2 = ((VCFData) record).getPos();
 					String altList1 = ((VCFGroup) group).getAltList1(); // assign
@@ -170,7 +195,7 @@ public class AlGtSimpleRules {
 			}
 
 		} catch (Exception e) {
-			System.out.println(e.toString());
+			logger.debug(e.toString());
 			e.printStackTrace();
 		} finally {
 			if (conn != null)
@@ -197,7 +222,11 @@ public class AlGtSimpleRules {
 		} else if (gts[0].equals("1")) {
 			((VCFData) vcf).setAllele1(alts[0]);
 		} else {
-			((VCFData) vcf).setAllele1(alts[1]);
+			try{
+				((VCFData) vcf).setAllele1(alts[1]);
+			}catch (Exception e){
+				//e.printStackTrace();
+			}
 		}
 		int arraySize = alts.length;
 
@@ -239,7 +268,7 @@ public class AlGtSimpleRules {
 			a1 = Arrays.asList(altList2.split(",")).indexOf(allele2) + 1;
 			a3 = Arrays.asList(altList2.split(",")).indexOf(allele1) + 1;
 		}
-		a2 = genoType[1];
+		a2 = genoType[2];
 		genoType1 = Integer.toString(a1) + a2 + Integer.toString(a3);
 
 		return genoType1;
@@ -260,9 +289,14 @@ public class AlGtSimpleRules {
 			String varType = null;
 			int start1 = 0;
 			int start2 = 0;
+		
 
 			if (var.contains(",")) {
 				vars = var.split(",");
+				
+				if(vars[0].equals("-")){
+					alts1.add(ref);
+				}
 
 				for (int i = 0; i < Math.min(vars[0].length(), ref.length()); i++) {
 					if (vars[0].substring(vars[0].length() - i - 1,
@@ -448,7 +482,7 @@ public class AlGtSimpleRules {
 			((VCFData) vcf).setModRef1(ref);
 
 		} catch (Exception e) {
-			System.out.println(e.toString());
+			logger.info(e.toString());
 			e.printStackTrace();
 		}
 	}
@@ -530,7 +564,7 @@ public class AlGtSimpleRules {
 					}
 
 					if (!vartype1.equals(vartype2)) {
-						if (!vartype1.equalsIgnoreCase("del")) {
+						if (!vartype1.equals("del")) {
 							vcf1.setModAlt1(modAlt1);
 							vcf1.setModAlt2("X");
 							vcf2.setModAlt1("X");
@@ -597,7 +631,7 @@ public class AlGtSimpleRules {
 		return mList;
 	}
 
-	public static void createAlleleList(ArrayList<Object> mergedList)
+	public static void createAlleleList(ArrayList<Object> mergedList, String file)
 			throws IOException {
 
 		int lastPos = 0;
@@ -676,11 +710,11 @@ public class AlGtSimpleRules {
 			}
 
 		} catch (Exception e) {
-			System.out.println("Grouping " + e.toString());
+			logger.info("Grouping " + e.toString());
 		}
 		int size = 32000000;
 
-		PrintWriter fw = new PrintWriter(new BufferedWriter(new FileWriter("merged_output22.txt"), size));
+		PrintWriter fw = new PrintWriter(new BufferedWriter(new FileWriter(file), size));
 
 		String output = null;
 		for (Object mrgRecord : mergedList) {
@@ -804,6 +838,8 @@ public class AlGtSimpleRules {
 					}
 				}
 			}
+			//System.out.println(output);
+			logger.info("Write to file");
 			fw.write(output);
 		}
 		fw.close();
