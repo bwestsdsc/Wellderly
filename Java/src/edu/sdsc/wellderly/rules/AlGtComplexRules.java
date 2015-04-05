@@ -23,7 +23,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 
 	}
 
-	public List<Object> getComplexData() throws Exception {
+	public List<Object> getComplexData(String inChrom) throws Exception {
 
 		Connection conn = null;
 		ResultSet rs = null;
@@ -39,7 +39,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 		String query = "select subject_id, chrom, pos, ref, split_part(alt, ',', 1) as allele1, "
 				+ "split_part(alt, ',', 2) as allele2, "
 				+ "split_part(file, ':', 1) as GT, alt "
-				+ "from gene.illumina_vcf where alt like '%,%' "
+				+ "from gene.illumina_vcf where chrom = ? and alt != '.' and alt like '%,%' "
 				+ "and (length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1) "
 				+ "order by  2, 3, 5, 6, 7";
 
@@ -47,6 +47,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 
 			PreparedStatement ps = conn.prepareStatement(query);
 			ps.setFetchSize(100000);
+			ps.setString(1, inChrom);
 			rs = ps.executeQuery();
 
 		} catch (Exception e) {
@@ -92,7 +93,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 				vcfGrp.setGt(genotype);
 				vcf.setSubjectID(subjID);
 				vcf.setType("c");
-				//vcfTrim(vcf, vcfGrp);
+				vcfTrim(vcf, vcfGrp);
 				recordList.add(vcf);
 				lastPos = pos;
 			}
@@ -227,7 +228,6 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 
 			// set the basis for the calculation. dels have a base of ref and
 			// all others have a basis of the alts
-			// System.out.println(x);
 			if (modPos1 == modPos2) {
 				if (!vartype1.equals("del")) {
 					a1 = altList3.indexOf(allele1) + 1;
@@ -239,7 +239,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 				} else {
 					a3 = altList4.indexOf(ref2) + 1;
 				}
-				a2 = genoType[2];
+				a2 = genoType[1];
 				genoType1 = Integer.toString(a1) + a2 + Integer.toString(a3);
 			} else {
 				if (vartype1.equals("del")) {
@@ -252,7 +252,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 				} else {
 					a5 = altList3.indexOf(allele2) + 1;
 				}
-				a2 = genoType[2];
+				a2 = genoType[1];
 				int modGT = a1 != 0 ? a1 : a5;
 				if (!allele1.equals("X")) {
 					genoType1 = Integer.toString(modGT) + a2 + "X";

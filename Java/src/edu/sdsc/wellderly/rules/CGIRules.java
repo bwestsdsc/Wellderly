@@ -44,11 +44,14 @@ public class CGIRules {
 		inChrom = args[1];
 		offset = args[2];
 		limit = args[3];
-		
+
 		LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
 		StatusPrinter.print(lc);
-		
-		logger.info("Entering application.");
+
+		System.out.println("Entering application." + file + " Chromosome "
+				+ inChrom + " limit " + limit + " offset " + offset);
+		logger.info("Entering application." + file + " Chromosome " + inChrom
+				+ " limit "+ " offset " + offset);
 
 		ResultSet rs = getCGIData();
 		try {
@@ -59,9 +62,9 @@ public class CGIRules {
 		createDownload(recordList);
 		computeGenotype();
 		createFile();
-		
+
 		logger.info("Exiting application.");
-		
+
 	}
 
 	public static ResultSet getCGIData() {
@@ -78,36 +81,36 @@ public class CGIRules {
 		// ignore offset and limit. For testing only. They will be removed when
 		// in production.
 		String query = "select chromosome, begin_pos, end_pos, zygosity, vartype,  patient_id,"
-				+ " case when reference is null then '-' else reference end, "
+				+ "case when reference is null then '-' else reference end, "
 				+ "case when allele1Seq like '%?%' then 'N' when allele1Seq is null then '-' else allele1Seq end, "
 				+ "case when allele2Seq like '%?%' then 'N' when allele2Seq is null then '-' else allele2Seq end "
-				+ "from gene.cgi_data where  reference <> '=' and chromosome = ? and vartype != 'ins' "
+				+ "from gene.cgi_data where chromosome = ? and reference <> '=' and vartype not in ('ins', 'ref')"
 				+ " and zygosity != 'no-call' "
 				+ "Union "
 				+ "select  chromosome, begin_pos, end_pos, zygosity, vartype, patient_id,"
 				+ "case when reference is null then '-' else reference end, "
 				+ "case when allele1Seq like '%?%' then 'N' when allele1Seq is null then '-' else allele1Seq end, "
 				+ "case when allele2Seq like '%?%' then 'N' when allele2Seq is null then '-' else allele2Seq end "
-				+ "from gene.cgi_data where chromosome = ? and vartype = 'ins' "
+				+ "from gene.cgi_data where chromosome = ? and vartype = 'ins'"
 				+ " and zygosity != 'no-call' "
-				+ "order by chromosome, begin_pos, allele1Seq, vartype  limit ? offset ?";
+				+ "order by patient_id, chromosome, begin_pos, allele1Seq, vartype limit ? offset ?";
 
 		try {
+			//System.out.println(query);
 			PreparedStatement ps = conn.prepareStatement(query);
 			ps.setString(1, inChrom);
-			ps.setString(2, inChrom);
+		    ps.setString(2, inChrom);
 			ps.setInt(4, Integer.parseInt(offset));
 			ps.setInt(3, Integer.parseInt(limit));
 			rs = ps.executeQuery();
-	
-			
+
 		} catch (Exception e) {
 			logger.debug(e.toString());
 			System.out.println(e.toString());
 
 		}
 		return rs;
-		
+
 	}
 
 	private static void parseData(ResultSet rs) throws SQLException {
@@ -290,80 +293,171 @@ public class CGIRules {
 			String var2 = ((VCFData) vcf).getAllele2();
 			String ref = ((VCFData) vcf).getRef();
 			String ref1 = ((VCFData) vcf).getRef();
+			int start1 = 0;
 			String[] gts = ((VCFData) vcf).getGenotype().split("");
 			String vartype1 = ((VCFData) vcf).getVartype1();
 			String vartype2 = ((VCFData) vcf).getVartype1();
 
 			if ((vartype1.equals("del") || vartype1.equals("complex"))
-					&& (var1.equals("-") || var2.equals("-"))) {
+					&& ((var1.equals("-") && var2.equals("-")))) {
 				alts.add(ref);
 			}
 
-			// get the end index of the substring for allele1
-			if (!ref.equals(var1) && !var1.equals("-")) {
-				for (int i = 0; i < Math.min(var1.length(), ref.length()); i++) {
-					if (var1.substring(var1.length() - i - 1, var1.length() - i)
-							.equals(ref.substring(ref.length() - i - 1,
-									ref.length() - i))) {
-						end1 = end1 + 1;
-					} else {
-						break;
+			// trimming logic is slightly different from other vartypes
+			if (!vartype1.equals("sub") && !vartype2.equals("sub")) {
+				// get the end index of the substring for allele1
+				if (!ref.equals(var1) && !var1.equals("-") && !var1.equals("N")) {
+					for (int i = 0; i < Math.min(var1.length(), ref.length()); i++) {
+						if (var1.substring(var1.length() - i - 1,
+								var1.length() - i).equals(
+								ref.substring(ref.length() - i - 1,
+										ref.length() - i))) {
+							end1 = end1 + 1;
+						} else {
+							break;
+						}
 					}
-				}
 
-				if (end1 != 0) {
-					ref = ref.substring(0, ref.length() - end1);
-					var1 = var1.substring(0, var1.length() - end1);
-				}
-
-				// get the end index of the substring for allele1 start
-				int start1 = 0;
-				for (int i = 0; i < Math.min(var1.length(), ref.length()); i++) {
-					if (var1.charAt(i) == ref.charAt(i)) {
-						start1++;
-					} else {
-						break;
+					if (end1 != 0) {
+						ref = ref.substring(0, ref.length() - end1);
+						var1 = var1.substring(0, var1.length() - end1);
 					}
-				}
-				// trim the head
 
-				ref = ref.substring(start1);
-				var1 = var1.substring(start1);
-				begin1 = begin1 + start1;
-			}
+					// get the end index of the substring for allele1 start
 
-			// get the end position index for allele2 substring
-			if (!ref1.equals(var2) && !var2.equals("-")) {
-				for (int i = 0; i < Math.min(var2.length(), ref1.length()); i++) {
-					if (var2.substring(var2.length() - i - 1, var2.length() - i)
-							.equals(ref1.substring(ref1.length() - i - 1,
-									ref1.length() - i))) {
-						end2 = end2 + 1;
-					} else {
-						break;
+					for (int i = 0; i < Math.min(var1.length(), ref.length()); i++) {
+						if (var1.charAt(i) == ref.charAt(i)) {
+							start1++;
+						} else {
+							break;
+						}
 					}
+					// trim the head
+
+					ref = ref.substring(start1);
+					var1 = var1.substring(start1);
+					begin1 = begin1 + start1;
 				}
 
-				if (end2 != 0) {
-					ref1 = ref1.substring(0, ref1.length() - end2);
-					var2 = var2.substring(0, var2.length() - end2);
-				}
-
-				// start pos index for allele2
-				int start2 = 0;
-				for (int i = 0; i < Math.min(var2.length(), ref1.length()); i++) {
-					if (var2.charAt(i) == ref1.charAt(i)) {
-						start2++;
-					} else {
-						break;
+				// get the end position index for allele2 substring
+				if (!ref1.equals(var2) && !var2.equals("-")
+						&& !var2.equals("N")) {
+					for (int i = 0; i < Math.min(var2.length(), ref1.length()); i++) {
+						if (var2.substring(var2.length() - i - 1,
+								var2.length() - i).equals(
+								ref1.substring(ref1.length() - i - 1,
+										ref1.length() - i))) {
+							end2 = end2 + 1;
+						} else {
+							break;
+						}
 					}
+
+					if (vartype1.equals(vartype2) && vartype1.equals("sub")) {
+						end2 = end1;
+
+					}
+
+					if (end2 != 0) {
+						ref1 = ref1.substring(0, ref1.length() - end2);
+						var2 = var2.substring(0, var2.length() - end2);
+					}
+
+					// start pos index for allele2
+					int start2 = 0;
+					for (int i = 0; i < Math.min(var2.length(), ref1.length()); i++) {
+						if (var2.charAt(i) == ref1.charAt(i)) {
+							start2++;
+						} else {
+							break;
+						}
+					}
+
+					// trim the head
+
+					ref1 = ref1.substring(start2);
+					var2 = var2.substring(start2);
+					begin2 = begin2 + start2;
+				}
+			} else {
+				// get the end index of the substring for allele1
+				if (!var1.equals("-") && !var1.equals("N")) {
+					for (int i = 0; i < Math.min(var1.length(), ref.length()); i++) {
+						if (var1.substring(var1.length() - i - 1,
+								var1.length() - i).equals(
+								ref.substring(ref.length() - i - 1,
+										ref.length() - i))) {
+							end1 = end1 + 1;
+						} else {
+							break;
+						}
+					}
+
+					if (end1 != 0) {
+						ref = ref.substring(0, ref.length() - end1);
+						var1 = var1.substring(0, var1.length() - end1);
+					}
+
+					// get the end index of the substring for allele1 start
+
+					for (int i = 0; i < Math.min(var1.length(), ref.length()); i++) {
+						if (var1.charAt(i) == ref.charAt(i)) {
+							start1++;
+						} else {
+							break;
+						}
+					}
+					// trim the head
+
+					ref = ref.substring(start1);
+					var1 = var1.substring(start1);
+					begin1 = begin1 + start1;
 				}
 
-				// trim the head
+				// get the end position index for allele2 substring
+				if (!var2.equals("-") && !var2.equals("N")) {
+					for (int i = 0; i < Math.min(var2.length(), ref1.length()); i++) {
+						if (var2.substring(var2.length() - i - 1,
+								var2.length() - i).equals(
+								ref1.substring(ref1.length() - i - 1,
+										ref1.length() - i))) {
+							end2 = end2 + 1;
+						} else {
+							break;
+						}
+					}
 
-				ref1 = ref1.substring(start2);
-				var2 = var2.substring(start2);
-				begin2 = begin2 + start2;
+					if (vartype1.equals(vartype2) && vartype1.equals("sub")) {
+						end2 = 0;
+
+					}
+
+					if (end2 != 0) {
+						ref1 = ref1.substring(0, ref1.length() - end2);
+						var2 = var2.substring(0, var2.length() - end2);
+					}
+
+					// start pos index for allele2
+					int start2 = 0;
+					if (ref1.equals(var2)) {
+						start2 = start1;
+					} else {
+						for (int i = 0; i < Math.min(var2.length(),
+								ref1.length()); i++) {
+							if (var2.charAt(i) == ref1.charAt(i)) {
+								start2++;
+							} else {
+								break;
+							}
+						}
+					}
+
+					// trim the head
+
+					ref1 = ref1.substring(start2);
+					var2 = var2.substring(start2);
+					begin2 = begin2 + start2;
+				}
 			}
 
 			// is this a snp
@@ -432,25 +526,29 @@ public class CGIRules {
 			((VCFData) vcf).setModAlt1(var1);
 			((VCFData) vcf).setModAlt2(var2);
 
-			if (!ref.equals("-") && !ref.equals("") && ref != null) {
-				alts.add(ref);
-			}
-			if (!ref1.equals("-") && !ref1.equals("") && ref1 != null) {
-				alts.add(ref1);
-			}
-			if (!var1.equals("-") && !var1.equals("") && var1 != null
-					&& !var1.equals("N")) {
-				if (!var1.equals(ref)) {
-					alts.add(var1);
+			if (vartype1.equals("del")) {
+				if (!ref.equals("-") && !ref.equals("") && !ref.equals("N")
+						&& ref != null) {
+					alts.add(ref);
+				}
+				if (!ref1.equals("-") && !ref1.equals("") && !ref1.equals("N")
+						&& ref1 != null) {
+					alts.add(ref1);
+				}
+			} else {
+				if (!var1.equals("-") && !var1.equals("") && var1 != null
+						&& !var1.equals("N")) {
+					if (!var1.equals(ref)) {
+						alts.add(var1);
+					}
+				}
+				if (!var2.equals("-") && !var2.equals("") && var2 != null
+						&& !var2.equals("N")) {
+					if (!var2.equals(ref1)) {
+						alts.add(var2);
+					}
 				}
 			}
-			if (!var2.equals("-") && !var2.equals("") && var2 != null
-					&& !var2.equals("N")) {
-				if (!var2.equals(ref1)) {
-					alts.add(var2);
-				}
-			}
-
 			if (!gts[0].equals("0")) {
 				((VCFData) vcf).setModAlt1(var1);
 			} else {
@@ -521,6 +619,7 @@ public class CGIRules {
 					}
 
 					altList1 = sortAlts(altList);
+					((VCFData) vcf).setSortedList(altList1.toString());
 
 					Set<String> altList2 = new HashSet<String>();
 					for (String alts : altList1) {
@@ -578,22 +677,26 @@ public class CGIRules {
 
 			if (vartype.equals("del")) {
 				if (ref1 != null && !ref1.equals("-") && !ref1.equals("")
-						&& !ref1.equals("X") && !var1.equals("N")) {
+						&& !ref1.equals("X") && !ref1.equals("N")
+						&& !var1.equals("N")) {
 					alts.add(ref1);
 					if (var1.equals("-")) {
 						alts.add(ref1);
-						if (!orgVar1.equals("-"))
-							alts.add(orgVar1);
+						/*
+						 * if (!orgVar1.equals("-")) alts.add(orgVar1);
+						 */
 						if (orgVar1.equals("-")) {
 							alts.add(ref);
 						}
 					}
 				}
 				if (ref2 != null && !ref2.equals("-") && !ref2.equals("")
-						&& !ref2.equals("X") && !var2.equals("N")) {
+						&& !ref2.equals("X") && !ref1.equals("N")
+						&& !var2.equals("N")) {
 					if (var2.equals("-")) {
-						if (!orgVar2.equals("-"))
-							alts.add(orgVar2);
+						/*
+						 * if (!orgVar2.equals("-")) alts.add(orgVar2);
+						 */
 						if (orgVar2.equals("-")) {
 							alts.add(ref);
 						}
@@ -763,9 +866,31 @@ public class CGIRules {
 		try {
 			PrintWriter fw = new PrintWriter(new BufferedWriter(new FileWriter(
 					file, true), size));
+			
+			for(Object record : recordList){
+				String chrom = ((VCFData) record).getChrom();
+				int pos = ((VCFData) record).getPos();
+				String subjID = ((VCFData) record).getSubjectID();
+				String ref = ((VCFData) record).getRef();
+				int modPos1 = ((VCFData) record).getModStartPos1();
+				String modRef1 = ((VCFData) record).getModRef1();
+				String allele1 = ((VCFData) record).getAllele1();
+				String allele2 = ((VCFData) record).getAllele2();
+				String modAlt1 = ((VCFData) record).getModAlt1();
+				String modAlt2 = ((VCFData) record).getModAlt2();
+				String vartype1 = ((VCFData) record).getVartype1();
+				String gt = ((VCFData) record).getGenotype();
+				String alleleList = ((VCFData) record).getSortedList();
+				String modGT = ((VCFData) record).getModGT1();
+				
+				fw.write(subjID + "\t" +chrom + "\t" + pos + "\t" + ref + "\t" + allele1 + "\t" +
+						allele2 + "\t" + gt + "\t" + vartype1 + "\t" + modPos1 + "\t" +
+						modRef1 + "\t" + modAlt1 + "\t" + modAlt2 + "\t" + alleleList + "\t" +
+						modGT + "\n");
+			}
 
-			recordList.parallelStream().forEach(
-					e -> fw.write(((VCFData) e).getSubjectID() + "\t"
+			/*recordList.parallelStream().forEachOrdered(
+							e -> fw.write(((VCFData) e).getSubjectID() + "\t"
 							+ ((VCFData) e).getChrom() + "\t"
 							+ ((VCFData) e).getPos() + "\t"
 							+ ((VCFData) e).getRef() + "\t"
@@ -777,13 +902,13 @@ public class CGIRules {
 							+ ((VCFData) e).getModRef1() + "\t"
 							+ ((VCFData) e).getModAlt1() + "\t"
 							+ ((VCFData) e).getModAlt2() + "\t"
-							+ ((VCFData) e).getAltList1() + "\t"
+							+ ((VCFData) e).getSortedList() + "\t"
 							+ ((VCFData) e).getModGT1() + "\n"));
-			
+*/
 			fw.close();
 
 		} catch (IOException e) {
-			
+
 			e.printStackTrace();
 			logger.warn(e.toString());
 		}

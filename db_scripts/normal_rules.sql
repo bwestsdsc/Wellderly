@@ -210,3 +210,12 @@ insert into gene.vcf_tmp (chrom, pos, ref, alt, allele1, allele2, org_gt, vartyp
 insert into gene.vcf_tmp (chrom, pos, ref, alt, allele1, allele2, org_gt, vartype, mod_pos, mod_ref, mod_allele1, mod_allele2, allele_list, new_gt) values ('chr1','10108','C','CCT','C','CCT','0/1','ins','10109','-','-','CT','[CT]','0/1');
 
 select * from gene.vcf_tmp
+
+
+select * from delete_vectors
+
+select make_ahm_now()
+
+select purge_table('gene.variant_quality')
+
+select purge()

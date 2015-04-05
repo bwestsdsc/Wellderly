@@ -260,9 +260,21 @@ RETURN (CASE WHEN(length(ref) = 1 and length(alt) = 1 or REGEXP_LIKE(alt, ',')) 
 end;
 
 
-ALTER TABLE staging.illumina_vcfa
-	ADD CONSTRAINT illumina_vcfa_pk
+ALTER TABLE staging.illumina_vcf
+	ADD CONSTRAINT illumina_vcf_pk
 	PRIMARY KEY (subject_id, chrom, ref, alt, pos)
 GO
 
+ALTER TABLE gene.illumina_vcf
+	ADD CONSTRAINT illumina_vcf_pk
+	PRIMARY KEY (subject_id, chrom, ref, alt, pos)
+GO
+
+ALTER TABLE gene.cgi_data
+	ADD CONSTRAINT cgi_data_pk
+	PRIMARY KEY (patient_id, chromosome, reference, begin_pos)
+GO
+
+
+select analyze_statistics('')
 

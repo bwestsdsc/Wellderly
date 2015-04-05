@@ -629,5 +629,25 @@ ElementValue {'Type': 'Preferred'}
 
 from '/localdisk/exome_vcf/ESP6500SI-V2-SSA137.updatedProteinHgvs.chr6.snps_indels.vcf' 
 
+select make_ahm_now()
+
+select * from delete_vectors
+
+select purge_projection('gene.variant_quality_DBD_1_seg_load_notation_b0')
+
+select refresh('gene.variant_quality')
+
+select  purge()
+
+select count(*) from gene.cgi_merged where chrom = 'chr18' and allele_list is null
+
+select * from gene.cgi_merged where chrom = 'chrX' limit 500
+
+HE00214 chr18 42296341
+
+select * from gene.cgi_merged where mod_genotype isnull limit 50
+
+
+update gene.variant_quality set patient_id = 'HE00552', load_date = to_date('2015-02-26', 'dd/mm/yyy'), load_process ='ETL Process' where patient_id = 'NA'
 
 

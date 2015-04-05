@@ -28,3 +28,16 @@ SELECT SPLIT_PART(VARTYPE, '_', 1) AS CHROMOSOME,
     SPLIT_PART(VARNOTES, '///', 2) AS NOTES, NOW(), 
 	'ETL Process' 
 FROM STAGING.CLINVAR
+
+insert into gene.illumina_vcf
+SELECT distinct subject_id, chrom, pos, REF, alt, id, TypeRules(REF,alt) AS 
+	'vartype', ReferenceRules(TypeRules(REF, alt), REF, alt) AS 'mod_ref', 
+	AltRules(TypeRules(REF, alt), REF, alt) AS 'mod_alt', PosRules(TypeRules(REF
+	, alt), REF, alt) + pos AS 'mod_start_pos', PosRules(TypeRules(REF, alt), 
+	REF, alt) + LENGTH(ReferenceRules(TypeRules(REF, alt), REF, alt)) + pos AS 
+	"mod_end_pos", qual, filter, info, format, file, now() AS "date_loaded", 
+	'ETL Process' AS "loaded_by" 
+FROM staging.illumina_vcf
+GO
+
+select * from delete_vectors
