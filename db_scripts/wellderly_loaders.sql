@@ -190,3 +190,102 @@ alter table gene.coverage partition by patient_id reorganize
 select count(*) from gene.coverage where patient_id is not null --2754393777
 
 SELECT * FROM disk_storage WHERE storage_usage ILIKE '%data%' AND disk_space_free_mb/(disk_space_free_mb+disk_space_used_mb) <= 0.45;
+
+drop table staging.illumina_phased
+
+CREATE TABLE staging.illumina_phased  ( 
+	subject_id   	varchar(20), //NOT NULL,
+	chrom        	varchar(80) NOT NULL,
+	pos          	int NOT NULL,
+	ref          	varchar(80) NOT NULL,
+	alt          	varchar(80) NOT NULL,
+	id           	varchar(80),
+	vartype      	varchar(5),
+	mod_ref      	varchar(25),
+	mod_alt      	varchar(80),
+	mod_start_pos	int,
+	mod_end_pos  	int,
+	qual         	varchar(8000),
+	filter       	varchar(8000),
+	info         	varchar(8000),
+	format       	varchar(8000),
+	file         	varchar(8000),
+    data_file       varchar(8000),
+	date_loaded  	timestamptz,
+	loaded_by    	varchar(11)
+	//PRIMARY KEY(ref,alt,chrom,pos,subject_id)
+)
+GO
+
+
+select subject_id, count(*) from staging.illumina_phased 
+group by subject_id order by 1
+
+select distinct subject_id, illumina_ref from gene.did_subject_xref where illumina_ref is not null and subject_id not in (
+select distinct p.subject_id from staging.illumina_phased p)
+
+select distinct chromosome, count(*) from gene.variant_quality where allele1Seq = '?' or allele2Seq = '?'
+group by chromosome
+order by 1
+
+ limit 500
+
+copy staging.illumina_vcf(chrom, pos, id, ref, alt, qual, filter, info, format, file) 
+from  '/localdisk/well_illumina/batch01/LP6005832-DNA_D06-HPAAD-1_Phased.vcf.gz' 
+GZIP DELIMITER E'\t' skip 112 rejected data '/tmp/rejected_data' EXCEPTIONS '/tmp/exceptions' trailing nullcols DIRECT;
+
+truncate table staging.illumina_phased
+
+update staging.illumina_phased set subject_id = 'HE01033', data_file = 'LP6005832-DNA_D06-HPAAD-1_Phased.vcf.gz' where subject_id is null
+
+select * from st
+
+select * from delete_vectors
+
+select * from locks
+
+SELECT DUMP_LOCKTABLE();
+
+select make_ahm_now()
+
+select purge()
+
+grant select on staging.illumina_phased to stsi
+
+select * from gene.did_subject_xref where subject_id = 'HE00006'
+
+delete from staging.illumina_phased where subject_id = 'HE00006'
+
+insert into gene.did_subject_xref (subject_id, illumina_ref)
+values ('HE00006', 'LP6005830-DNA_B03-HPAAD-1')
+
+
+update gene.did_subject_xref set illumina_ref = 'LP6005830-DNA_B01' where subject_id = 'HE00006'
+
+select * from gene.did_subject_xref where illumina_ref like 'LP6005830-DNA_B01%'
+
+select * from gene.cgi_merged where chrom = 'chr22'
+
+select count(*) from gene.cgi_mergedb
+
+select * from transactions where end_timestamp is null limit 50
+
+select * from locks
+
+select * from sessions where transaction_id = '45035996273938807'
+
+select * from transactions where transaction_id = '45035996273938807'
+
+select close_session('stsi01.scripps.edu-6197:0x8b7af')
+
+select close_all_sessions()
+
+SELECT * 
+FROM   v_internal.dc_lock_attempts 
+WHERE  result = 'timeout';
+
+
+select refresh('gene.cgi_data')
+
+select * from transactions limit 50
+

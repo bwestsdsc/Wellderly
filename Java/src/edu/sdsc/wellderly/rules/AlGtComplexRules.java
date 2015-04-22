@@ -39,7 +39,7 @@ public class AlGtComplexRules extends AlGtSimpleRules {
 		String query = "select subject_id, chrom, pos, ref, split_part(alt, ',', 1) as allele1, "
 				+ "split_part(alt, ',', 2) as allele2, "
 				+ "split_part(file, ':', 1) as GT, alt "
-				+ "from gene.illumina_vcf where chrom = ? and alt != '.' and alt like '%,%' "
+				+ "from staging.illumina_phased where chrom = ? and alt != '.' and alt like '%,%' "
 				+ "and (length(split_part(alt,',', 1)) > 1 or length(split_part(alt,',', 2)) > 1) "
 				+ "order by  2, 3, 5, 6, 7";
 

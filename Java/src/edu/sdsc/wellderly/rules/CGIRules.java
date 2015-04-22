@@ -84,7 +84,7 @@ public class CGIRules {
 				+ "case when reference is null then '-' else reference end, "
 				+ "case when allele1Seq like '%?%' then 'N' when allele1Seq is null then '-' else allele1Seq end, "
 				+ "case when allele2Seq like '%?%' then 'N' when allele2Seq is null then '-' else allele2Seq end "
-				+ "from gene.cgi_data where chromosome = ? and reference <> '=' and vartype not in ('ins', 'ref')"
+				+ "from gene.cgi_data where chromosome = ? and reference not in ('=', 'N') and vartype not in ('ins', 'ref')"
 				+ " and zygosity != 'no-call' "
 				+ "Union "
 				+ "select  chromosome, begin_pos, end_pos, zygosity, vartype, patient_id,"
@@ -126,6 +126,14 @@ public class CGIRules {
 			String ref = rs.getString(7);
 			String allele1 = rs.getString(8);
 			String allele2 = rs.getString(9);
+			//zygosity = "hap";
+			if(chrom.equals("chrY") || chrom.equals("chrM") && allele2.equals("-")){
+				allele2 = allele1;
+			}
+			if(chrom.equals("chrY") || chrom.equals("chrM") &&  allele1.equals("-") && allele2.equals("-")){
+				vartype = "del";
+			}
+			
 			if (vartype.equals("del")) {
 				// alts.add(ref);
 				orgAlts.add(ref);
@@ -682,9 +690,6 @@ public class CGIRules {
 					alts.add(ref1);
 					if (var1.equals("-")) {
 						alts.add(ref1);
-						/*
-						 * if (!orgVar1.equals("-")) alts.add(orgVar1);
-						 */
 						if (orgVar1.equals("-")) {
 							alts.add(ref);
 						}
@@ -694,9 +699,6 @@ public class CGIRules {
 						&& !ref2.equals("X") && !ref1.equals("N")
 						&& !var2.equals("N")) {
 					if (var2.equals("-")) {
-						/*
-						 * if (!orgVar2.equals("-")) alts.add(orgVar2);
-						 */
 						if (orgVar2.equals("-")) {
 							alts.add(ref);
 						}
@@ -867,7 +869,7 @@ public class CGIRules {
 			PrintWriter fw = new PrintWriter(new BufferedWriter(new FileWriter(
 					file, true), size));
 			
-			for(Object record : recordList){
+			/*for(Object record : recordList){
 				String chrom = ((VCFData) record).getChrom();
 				int pos = ((VCFData) record).getPos();
 				String subjID = ((VCFData) record).getSubjectID();
@@ -887,16 +889,16 @@ public class CGIRules {
 						allele2 + "\t" + gt + "\t" + vartype1 + "\t" + modPos1 + "\t" +
 						modRef1 + "\t" + modAlt1 + "\t" + modAlt2 + "\t" + alleleList + "\t" +
 						modGT + "\n");
-			}
+			}*/
 
-			/*recordList.parallelStream().forEachOrdered(
+			recordList.parallelStream().forEach(
 							e -> fw.write(((VCFData) e).getSubjectID() + "\t"
 							+ ((VCFData) e).getChrom() + "\t"
 							+ ((VCFData) e).getPos() + "\t"
 							+ ((VCFData) e).getRef() + "\t"
 							+ ((VCFData) e).getAllele1() + "\t"
 							+ ((VCFData) e).getAllele2() + "\t"
-							+ ((VCFData) e).getGenotype() + "\t"
+							+ "" + "\t"
 							+ ((VCFData) e).getVartype1() + "\t"
 							+ ((VCFData) e).getModStartPos1() + "\t"
 							+ ((VCFData) e).getModRef1() + "\t"
@@ -904,7 +906,7 @@ public class CGIRules {
 							+ ((VCFData) e).getModAlt2() + "\t"
 							+ ((VCFData) e).getSortedList() + "\t"
 							+ ((VCFData) e).getModGT1() + "\n"));
-*/
+
 			fw.close();
 
 		} catch (IOException e) {

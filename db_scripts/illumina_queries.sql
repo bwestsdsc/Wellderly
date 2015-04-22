@@ -455,3 +455,20 @@ select max(begin_pos) from gene.cgi_data where chromosome = 'chr8'
 
 select begin_pos from gene.cgi_data where chromosome = 'chr8' and reference != '=' and zygosity != 'no-call' offset 400000 limit 1
 
+
+select begin_pos from gene.cgi_data where chromosome = 'chr22' and reference != '=' and vartype != 'ref'
+and zygosity != 'no-call'
+order by chromosome, begin_pos, allele1Seq, vartype 
+offset 28999999 limit 10
+
+19048412     
+ 19048412     
+ 19048412     
+ 19048412     
+ 19048435     
+ 19048435     
+ 19048435     
+ 19048435     
+ 19048435     
+ 19048435    
+

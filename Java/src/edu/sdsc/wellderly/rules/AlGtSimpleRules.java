@@ -85,9 +85,8 @@ public class AlGtSimpleRules {
 
 		}
 
-	
 		String query = "select chrom, pos, ref, alt, split_part(file, ':', 1) as GT, subject_id, vartype "
-				+ "from gene.illumina_vcf where chrom = ? and alt != '.' "
+				+ "from staging.illumina_phased where chrom = ? and alt != '.' "
 				+ "and alt not like '%,%' or (chrom = ? and alt != '.' and alt like '%,%' and length(split_part(alt,',', 1)) = 1 "
 				+ "and length(split_part(alt,',', 2)) = 1) "
 				+ "order by 6, 1, 2, 4, 7 offset ? limit ?";
@@ -210,24 +209,23 @@ public class AlGtSimpleRules {
 	// allele1 and allele2 (like the CGI data)
 	public static void createAlleles(Object vcf) {
 
-	
 		String[] alts = null;
 		String gt = ((VCFData) vcf).getGenotype();
 		String ref = ((VCFData) vcf).getRef();
 		String alt = ((VCFData) vcf).getAlt();
 		String[] gts = null;
-		if (gt.length() < 3){
+		if (gt.length() < 3) {
 			gt = "X/1";
 		}
 		gts = gt.split("");
-		
+
 		alts = alt.split(",");
 
 		if (gts[0].equals("0")) {
 			((VCFData) vcf).setAllele1(ref);
 		} else if (gts[0].equals("1")) {
 			((VCFData) vcf).setAllele1(alts[0]);
-		} else if(gts[0].equals("X")){
+		} else if (gts[0].equals("X")) {
 			((VCFData) vcf).setAllele1("X");
 		} else {
 			try {
@@ -257,7 +255,6 @@ public class AlGtSimpleRules {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
 
 	}
 
@@ -268,7 +265,7 @@ public class AlGtSimpleRules {
 		int a1 = 0;
 		String a2 = "";
 		int a3 = 0;
-		if(gt.length() < 3){
+		if (gt.length() < 3) {
 			gt = "X/1";
 		}
 
@@ -277,18 +274,42 @@ public class AlGtSimpleRules {
 		altList2 = altList2.replace(" ", "");
 		String genoType1 = "";
 		String[] genoType = gt.split("");
+		String base1 = "";
+		String base2 = "";
 
-		if (!vartype.equals("del")) {
-			a1 = Arrays.asList(altList2.split(",")).indexOf(allele1) + 1;
-			a3 = Arrays.asList(altList2.split(",")).indexOf(allele2) + 1;
+		if (vartype.equals("del")) {
+			base1 = ref;
+			base2 = ref;
 		} else {
-			a1 = Arrays.asList(altList2.split(",")).indexOf(allele2) + 1;
-			a3 = Arrays.asList(altList2.split(",")).indexOf(allele1) + 1;
+			base1 = allele1;
+			base2 = allele2;
 		}
-		
 		a2 = genoType[1];
-		//for alts with an original genotype of 1
-		if(genoType[0].equals("X")){
+
+		if (vartype.equals("del")) {
+			/*if(ref.equals(allele1)){
+				a1 = 0;
+			}else{
+				a1 = Arrays.asList(altList2.split(",")).indexOf(base1) + 1;
+				a1 = a1 == 0 ? Integer.parseInt(genoType[0]) : 1;
+			}
+			if(ref.equals("allele2")){
+				a3 = 0;
+			} else {
+				a3 = Arrays.asList(altList2.split(",")).indexOf(base2) + 1;
+				a3 = a3 == 0 ? Integer.parseInt(genoType[2]) : allele1.equals(allele2) ? 1 : 2;
+			}	*/
+			a1 = !genoType[0].equals("") ? Integer.parseInt(genoType[0]) : 0;
+			a3 = !genoType[2].equals("") ? Integer.parseInt(genoType[2]) : 0;
+			
+		} else {
+			a1 = Arrays.asList(altList2.split(",")).indexOf(base1) + 1;
+			a3 = Arrays.asList(altList2.split(",")).indexOf(base2) + 1;
+		}
+
+		
+		// for alts with an original genotype of 1
+		if (genoType[0].equals("X")) {
 			genoType1 = "X" + a2 + Integer.toString(a3);
 		} else {
 			genoType1 = Integer.toString(a1) + a2 + Integer.toString(a3);
@@ -307,7 +328,7 @@ public class AlGtSimpleRules {
 			String var = ((VCFData) vcf).getAlt();
 			String ref = ((VCFData) vcf).getRef();
 			String gt = ((VCFData) vcf).getGenotype();
-			if(gt.length() < 3){
+			if (gt.length() < 3) {
 				gt = "X/1";
 				((VCFData) vcf).setModAlt1("X");
 			}
@@ -317,8 +338,7 @@ public class AlGtSimpleRules {
 			String varType = null;
 			int start1 = 0;
 			int start2 = 0;
-			
-			
+
 			if (var.contains(",")) {
 				vars = var.split(",");
 
@@ -411,12 +431,12 @@ public class AlGtSimpleRules {
 				if (!gts[0].equals("0") && !gts[0].equals("X")) {
 					((VCFData) vcf).setModAlt1(vars[0]);
 					((VCFData) vcf).setModAlt2(vars[1]);
-				} else if (gts[0].equals("X")){
+				} else if (gts[0].equals("X")) {
 					((VCFData) vcf).setModAlt1("X");
-				} else if(gts[0].equals("0")) {
+				} else if (gts[0].equals("0")) {
 					((VCFData) vcf).setModAlt1(ref);
 				}
-				
+
 				if (!gts[2].equals("0")) {
 					((VCFData) vcf).setModAlt2(vars[1]);
 				} else {
@@ -495,9 +515,9 @@ public class AlGtSimpleRules {
 				}
 				if (!gts[0].equals("0") && !gts[0].equals("X")) {
 					((VCFData) vcf).setModAlt1(var);
-				} else if (gts[0].equals("X")){
+				} else if (gts[0].equals("X")) {
 					((VCFData) vcf).setModAlt1("X");
-				} else if(gts[0].equals("0")) {
+				} else if (gts[0].equals("0")) {
 					((VCFData) vcf).setModAlt1(ref);
 				}
 				if (!gts[2].equals("0")) {
@@ -674,7 +694,7 @@ public class AlGtSimpleRules {
 
 		for (Object mrgRecord : sortedMergedList) {
 			String chrom = ((VCFData) mrgRecord).getChrom();
-			int pos = ((VCFData) mrgRecord).getPos();
+			int pos = ((VCFData) mrgRecord).getModStartPos1();
 			if (lastPos != 0 && lastPos != pos) {
 				vcfGrp.setAltList1(alts.toString());
 				vcfGrp.setAltList2(refs.toString());
@@ -690,25 +710,29 @@ public class AlGtSimpleRules {
 			String ref2 = ((VCFData) mrgRecord).getModRef2();
 			String var1 = ((VCFData) mrgRecord).getModAlt1();
 			String var2 = ((VCFData) mrgRecord).getModAlt2();
+			String vartype = ((VCFData) mrgRecord).getVartype1();
 
-			if (ref1 != null && !ref1.equals("-") && !ref1.equals("")
-					&& !ref1.equals("X")) {
-				refs.add(ref1);
-			}
-			if (ref2 != null && !ref2.equals("-") && !ref2.equals("")
-					&& !ref2.equals("X")) {
-				refs.add(ref2);
-			}
-			if (var1 != null && !var1.equals("-") && !var1.equals("")
-					&& !var1.equals("X")) {
-				if (!var1.equals(ref1)) {
-					alts.add(var1);
+			if (vartype.equals("del")) {
+				if (ref1 != null && !ref1.equals("-") && !ref1.equals("")
+						&& !ref1.equals("X")) {
+					refs.add(ref1);
 				}
-			}
-			if (var2 != null && !var2.equals("-") && !var2.equals("")
-					&& !var2.equals("X")) {
-				if (!var2.equals(ref2) && !var2.equals(ref1)) {
-					alts.add(var2);
+				if (ref2 != null && !ref2.equals("-") && !ref2.equals("")
+						&& !ref2.equals("X")) {
+					refs.add(ref2);
+				}
+			} else {
+				if (var1 != null && !var1.equals("-") && !var1.equals("")
+						&& !var1.equals("X")) {
+					if (!var1.equals(ref1)) {
+						alts.add(var1);
+					}
+				}
+				if (var2 != null && !var2.equals("-") && !var2.equals("")
+						&& !var2.equals("X")) {
+					if (!var2.equals(ref2) && !var2.equals(ref1)) {
+						alts.add(var2);
+					}
 				}
 			}
 
@@ -732,7 +756,7 @@ public class AlGtSimpleRules {
 				for (Object record : mergedList) {
 
 					chrom2 = ((VCFData) record).getChrom();
-					pos2 = ((VCFData) record).getPos();
+					pos2 = ((VCFData) record).getModStartPos1();
 					String altList = ((VCFComplexGroup) group).getAltList1();
 					String refList = ((VCFComplexGroup) group).getAltList2();
 
@@ -748,8 +772,8 @@ public class AlGtSimpleRules {
 		}
 		int size = 32000000;
 
-		PrintWriter fw = new PrintWriter(new BufferedWriter(
-				new FileWriter(file), size));
+		PrintWriter fw = new PrintWriter(new BufferedWriter(new FileWriter(
+				file, true), size));
 
 		String output = null;
 		for (Object mrgRecord : sortedMergedList) {
@@ -874,7 +898,7 @@ public class AlGtSimpleRules {
 				}
 			}
 			// System.out.println(output);
-			//logger.info("Write to file");
+			// logger.info("Write to file");
 			fw.write(output);
 		}
 		fw.close();
