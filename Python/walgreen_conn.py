@@ -1,23 +1,16 @@
 from vertica_python import connect
-#import pyodbc
-import sys
 
-
-class well_conn(object):
+class walgreen_conn(object):
     
     def db_conn(self):
        
         connection = connect({
-                              'host': '198.202.90.32',
+                              'host': 'bigonc.sdsc.edu',
                               'port': 5433,
                               'user': 'dbadmin',
                               'password': '3Nathan$',
-                              'database': 'wellderly'
+                              'database': 'walgreen'
 
                               })
         
         return connection
- 
-
-
-    
